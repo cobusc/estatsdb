@@ -1,0 +1,18 @@
+%%-*- mode: erlang -*-
+{application, estatsdb,
+ [
+  {description, "estatsdb"},
+  {vsn, "1"},
+  {modules, []},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib,
+                  inets,
+                  crypto,
+                  mochiweb,
+                  webmachine
+                 ]},
+  {mod, { estatsdb_app, []}},
+  {env, []}
+ ]}.
