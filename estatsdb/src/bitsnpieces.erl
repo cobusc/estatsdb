@@ -97,10 +97,39 @@ UPDATE spm.hourly_stats
 INSERT INTO spm.hourly_stats (ts,host,a)
 VALUES ('2013-01-01', 'aew1', 1);
 
+Example of helper stored procedures:
 
+CREATE OR REPLACE
+FUNCTION set_helper(_InsertStatement TEXT, _UpdateStatement)
+  RETURNS void
+AS $$
+BEGIN
+    BEGIN
+        EXECUTE _InsertStatement;
+    EXCEPTION
+        WHEN unique_violation THEN
+            EXECUTE _UpdateStatement;
+    END;
+    RETURN _Result;
+END
+$$
+LANGUAGE plpgsql;
 
-
-
-
+CREATE OR REPLACE
+FUNCTION update_helper(_UpdateStatement TEXT, _InsertStatement)
+  RETURNS void
+AS $$
+BEGIN
+    BEGIN
+        EXECUTE _UpdateStatement
+          INTO _Result;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            EXECUTE _UpdateStatement;
+    END;
+    RETURN _Result;
+END
+$$
+LANGUAGE plpgsql;
 
 
