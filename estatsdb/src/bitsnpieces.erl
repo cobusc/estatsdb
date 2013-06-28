@@ -53,7 +53,7 @@ test() ->
 %% An "update" operation will do the following:
 %% 
 %% UPDATE spm.hourly_stats
-%%    SET a = a + 1
+%%    SET a = COALESCE(a, 0) + 1
 %%  WHERE ts = '2013-01-01'
 %%    AND host = 'aew1';
 %% ...if 0 rows updated then...
