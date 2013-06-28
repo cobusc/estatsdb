@@ -9,8 +9,9 @@ WORK IN PROGRESS
 Usage
 -----
 
-Create a table for you application statistics:
+Create a table for you application statistics. It can exist in its own schema.
 ```sql
+CREATE SCHEMA myapp;
 CREATE TABLE myapp.daily_stats
 (
     day DATE,
@@ -24,7 +25,7 @@ CREATE TABLE myapp.daily_stats
 
 Refresh the _schema\_server_:
 ```
-scema_server:refresh().
+schema_server:refresh().
 ```
 
 To *set* values, call:
@@ -39,8 +40,8 @@ This will return something like:
     "day": "2013-01-01",
     "host": "testhost",
     "metric1": 100,
-    "metric2": nil,
-    "metric3": nil
+    "metric2": null,
+    "metric3": null
 }
 ```
 
@@ -60,8 +61,8 @@ This will return something like:
     "day": "2013-01-01",
     "host": "testhost",
     "metric1": 150,
-    "metric2": nil,
-    "metric3": nil
+    "metric2": null,
+    "metric3": null
 }
 ```
 
