@@ -1,43 +1,6 @@
 -module(bitsnpieces).
 -export([]).
 
--spec get_tables(Schemas::list(string())) -> list(string()).
-
-get_tables(Schemas) ->
-    % SQL used to select tables in a particular schema
-    SelectSql = "SELECT $1::text||'.'||table_name AS table_name
-                   FROM information_schema.tables 
-                  WHERE table_schema=$1",
-
-    % Function to get tables for a particular schema
-    GetTables = fun(Schema, Acc) ->
-        case dbutils:equery(SelectSql, [Schema]) of
-            {ok, _Cols, Rows} ->
-                [lists:map(fun ({X}) -> binary_to_list(X) end, Rows) | Acc]
-        end
-    end,
-
-    lists:foldl(GetTables, [], Schemas).
-
-
-describe_table(TableName) ->
-    % Tables must have a primary key for this to work...which is a good thing.
-    % Returns column name, data type, is_pk
-    Sql = "SELECT pg_attribute.attname AS column_name,
-                  FORMAT_TYPE(pg_attribute.atttypid, pg_attribute.atttypmod) AS format_type,
-                  pg_attribute.attnum = ANY(pg_index.indkey) AS is_pk
-             FROM pg_attribute,
-                  pg_index
-            WHERE pg_attribute.attrelid = $1::regclass
-              AND pg_index.indrelid = pg_attribute.attrelid
-              AND pg_index.indisprimary
-              AND NOT pg_attribute.attislocal",
-
-    case dbutils:equery(Sql, [TableName]) of
-        {ok, Cols, Rows} ->
-    
-    end,
-
 
 
 test() ->
@@ -77,59 +40,59 @@ test() ->
     io:format("Update: ~s~nInsert: ~s~n", [UpdateSql,InsertSql]).
 
 
-A "set" operation will do the following:
-
-INSERT INTO spm.hourly_stats (ts,host,a)
-VALUES ('2013-01-01', 'aew1', '1');
-...if DUPLICATE_KEY then...
-UPDATE spm.hourly_stats
-   SET a = 1
- WHERE ts = '2013-01-01'
-   AND host = 'aew1';
-
-An "update" operation will do the following:
-
-UPDATE spm.hourly_stats
-   SET a = a + 1
- WHERE ts = '2013-01-01'
-   AND host = 'aew1';
-...if 0 rows updated then...
-INSERT INTO spm.hourly_stats (ts,host,a)
-VALUES ('2013-01-01', 'aew1', 1);
-
-Example of helper stored procedures:
-
-CREATE OR REPLACE
-FUNCTION set_helper(_InsertStatement TEXT, _UpdateStatement)
-  RETURNS void
-AS $$
-BEGIN
-    BEGIN
-        EXECUTE _InsertStatement;
-    EXCEPTION
-        WHEN unique_violation THEN
-            EXECUTE _UpdateStatement;
-    END;
-    RETURN _Result;
-END
-$$
-LANGUAGE plpgsql;
-
-CREATE OR REPLACE
-FUNCTION update_helper(_UpdateStatement TEXT, _InsertStatement)
-  RETURNS void
-AS $$
-BEGIN
-    BEGIN
-        EXECUTE _UpdateStatement
-          INTO _Result;
-    EXCEPTION
-        WHEN NO_DATA_FOUND THEN
-            EXECUTE _UpdateStatement;
-    END;
-    RETURN _Result;
-END
-$$
-LANGUAGE plpgsql;
+%% A "set" operation will do the following:
+%% 
+%% INSERT INTO spm.hourly_stats (ts,host,a)
+%% VALUES ('2013-01-01', 'aew1', '1');
+%% ...if DUPLICATE_KEY then...
+%% UPDATE spm.hourly_stats
+%%    SET a = 1
+%%  WHERE ts = '2013-01-01'
+%%    AND host = 'aew1';
+%% 
+%% An "update" operation will do the following:
+%% 
+%% UPDATE spm.hourly_stats
+%%    SET a = a + 1
+%%  WHERE ts = '2013-01-01'
+%%    AND host = 'aew1';
+%% ...if 0 rows updated then...
+%% INSERT INTO spm.hourly_stats (ts,host,a)
+%% VALUES ('2013-01-01', 'aew1', 1);
+%% 
+%% Example of helper stored procedures:
+%% 
+%% CREATE OR REPLACE
+%% FUNCTION set_helper(_InsertStatement TEXT, _UpdateStatement)
+%%   RETURNS void
+%% AS $$
+%% BEGIN
+%%     BEGIN
+%%         EXECUTE _InsertStatement;
+%%     EXCEPTION
+%%         WHEN unique_violation THEN
+%%             EXECUTE _UpdateStatement;
+%%     END;
+%%     RETURN _Result;
+%% END
+%% $$
+%% LANGUAGE plpgsql;
+%% 
+%% CREATE OR REPLACE
+%% FUNCTION update_helper(_UpdateStatement TEXT, _InsertStatement)
+%%   RETURNS void
+%% AS $$
+%% BEGIN
+%%     BEGIN
+%%         EXECUTE _UpdateStatement
+%%           INTO _Result;
+%%     EXCEPTION
+%%         WHEN NO_DATA_FOUND THEN
+%%             EXECUTE _UpdateStatement;
+%%     END;
+%%     RETURN _Result;
+%% END
+%% $$
+%% LANGUAGE plpgsql;
 
 

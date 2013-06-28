@@ -13,7 +13,8 @@
          terminate/2,
          code_change/3,
 
-         lookup/1
+         lookup/1,
+         refresh/0
         ]).
 
 -record(state, {table_info :: gb_tree()}).
@@ -39,6 +40,13 @@ lookup(TableName) ->
     gen_server:call({local, ?MODULE}, {lookup, TableName}).
 
 
+-spec refresh() -> ok.
+
+refresh() ->
+    TableInfo = load_schemas(),
+    gen_server:call({local, ?MODULE}, {refresh, #state{table_info=TableInfo}}).
+
+
 %%%===================================================================
 %%% gen_server callbacks
 %%%===================================================================
@@ -55,8 +63,8 @@ lookup(TableName) ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    % @todo Read the table information from the database and set it.
-    {ok, #state{}}.
+    TableInfo = load_schemas(),
+    {ok, #state{table_info=TableInfo}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -76,6 +84,10 @@ init([]) ->
 handle_call({lookup, TableName}, _From, State) ->
     Reply = gb_trees:lookup(TableName, State#state.table_info),
     {reply, Reply, State};
+
+handle_call({refresh, NewState}, _From, _State) ->
+    {reply, ok, NewState};
+
 handle_call(_Request, _From, State) ->
     Reply = ok,
     {reply, Reply, State}.
@@ -134,3 +146,57 @@ code_change(_OldVsn, State, _Extra) ->
 %%%===================================================================
 %%% Internal functions
 %%%===================================================================
+
+-spec load_schemas() -> gb_tree().
+
+load_schemas() ->
+    Schemas = get_schemas(),
+    
+    Tables = lists:foldl(fun (Schema, Acc) -> [get_tables(Schema) | Acc] end, [], Schemas),
+
+    lists:foldl(fun (Table, Acc) -> gb_tree:insert(Table, describe_table(Table), Acc) end,
+                gb_tree:empty(), Tables).
+
+-spec get_schemas() -> list(string()).
+
+get_schemas() ->
+    case application:get_env(estatsdb, schemas) of
+        undefined ->
+            ["public"];
+        Schemas ->
+            Schemas
+    end.
+
+-spec get_tables(Schema::string()) -> list(string()).
+
+get_tables(Schema) ->
+    % SQL used to select tables in a particular schema
+    SelectSql = "SELECT $1::text||'.'||table_name AS table_name
+                   FROM information_schema.tables 
+                  WHERE table_schema=$1",
+
+    case dbutils:equery(SelectSql, [Schema]) of
+        {ok, _Cols, Rows} ->
+            lists:map(fun ({X}) -> binary_to_list(X) end, Rows)
+    end.
+
+-spec describe_table(TableName::string()) -> tuple(). 
+
+describe_table(TableName) ->
+    % Tables must have a primary key for this to work...which is a good thing.
+    % Returns column name, data type, is_pk
+    Sql = "SELECT pg_attribute.attname AS column_name,
+                  FORMAT_TYPE(pg_attribute.atttypid, pg_attribute.atttypmod) AS format_type,
+                  pg_attribute.attnum = ANY(pg_index.indkey) AS is_pk
+             FROM pg_attribute,
+                  pg_index
+            WHERE pg_attribute.attrelid = $1::regclass
+              AND pg_index.indrelid = pg_attribute.attrelid
+              AND pg_index.indisprimary
+              AND NOT pg_attribute.attislocal",
+
+    case dbutils:equery(Sql, [TableName]) of
+        {ok, Cols, Rows} ->
+            dbutils:transduce(Cols, Rows)
+    end.
+
