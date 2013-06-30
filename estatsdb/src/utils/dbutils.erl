@@ -46,14 +46,14 @@ equery(Sql, Params, Pool) ->
         {ok, Con} -> 
             case pgsql:equery(Con, Sql, Params) of
                 {error, #error{message=M}} = E -> % Standard error. Log and pass on.
-                    ok = logger:log_error("PSQL ERROR: ~s", [M]),
+                    ok = error_logger:info_msg("PSQL ERROR: ~s", [M]),
                     ok = dbutils:return_connection(Con, Pool),
                     E;
                 {error, closed} = E -> % What to do, what to do...can't hand it back to the pool, that's for sure.
-                    ok = logger:log_error("PSQL ERROR: closed", []),
+                    ok = error_logger:info_msg("PSQL ERROR: closed", []),
                     E; % Pass back to caller and trash Con
                 {error, sync_required} = E -> % According to docs "Error occured and pgsql:sync must be called"
-                    ok = logger:log_error("PSQL ERROR: sync_required", []),
+                    ok = error_logger:info_msg("PSQL ERROR: sync_required", []),
                     ok = pgsql:sync(Con), % Hopefully this fixes things
                     ok = dbutils:return_connection(Con, Pool), % Return to pool
                     E; % Pass back to caller
@@ -88,14 +88,14 @@ squery(Sql, Pool) ->
         {ok, Con} -> 
             case pgsql:squery(Con, Sql) of
                 {error, #error{message=M}} = E -> % Standard error. Log and pass on.
-                    ok = logger:log_error("PSQL ERROR: ~s", [M]),
+                    ok = error_logger:info_msg("PSQL ERROR: ~s", [M]),
                     ok = dbutils:return_connection(Con, Pool),
                     E;
                 {error, closed} = E -> % What to do, what to do...can't hand it back to the pool, that's for sure.
-                    ok = logger:log_error("PSQL ERROR: closed", []),
+                    ok = error_logger:info_msg("PSQL ERROR: closed", []),
                     E; % Pass back to caller and trash Con
                 {error, sync_required} = E -> % According to docs "Error occured and pgsql:sync must be called"
-                    ok = logger:log_error("PSQL ERROR: sync_required", []),
+                    ok = error_logger:info_msg("PSQL ERROR: sync_required", []),
                     ok = pgsql:sync(Con), % Hopefully this fixes things
                     ok = dbutils:return_connection(Con, Pool), % Return to pool
                     E; % Pass back to caller

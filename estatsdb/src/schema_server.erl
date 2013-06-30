@@ -14,7 +14,8 @@
          code_change/3,
 
          lookup/1,
-         refresh/0
+         refresh/0,
+         describe_table/1
         ]).
 
 -record(state, {table_info :: gb_tree()}).
@@ -37,14 +38,14 @@ start_link() ->
 -spec lookup(TableName::string()) -> none | {value, Val::any()}.
 
 lookup(TableName) ->
-    gen_server:call({local, ?MODULE}, {lookup, TableName}).
+    gen_server:call(?MODULE, {lookup, TableName}, infinity).
 
 
 -spec refresh() -> ok.
 
 refresh() ->
     TableInfo = load_schemas(),
-    gen_server:call({local, ?MODULE}, {refresh, #state{table_info=TableInfo}}).
+    gen_server:call(?MODULE, {refresh, #state{table_info=TableInfo}}, infinity).
 
 
 %%%===================================================================
@@ -151,11 +152,15 @@ code_change(_OldVsn, State, _Extra) ->
 
 load_schemas() ->
     Schemas = get_schemas(),
-    
-    Tables = lists:foldl(fun (Schema, Acc) -> [get_tables(Schema) | Acc] end, [], Schemas),
 
-    lists:foldl(fun (Table, Acc) -> gb_tree:insert(Table, describe_table(Table), Acc) end,
-                gb_tree:empty(), Tables).
+    io:format("Schemas: ~p~n", [Schemas]),
+    
+    Tables = lists:foldl(fun (Schema, Acc) -> get_tables(Schema) ++ Acc end, [], Schemas),
+
+    io:format("Tables: ~p~n", [Tables]),
+
+    lists:foldl(fun (Table, GbTree) -> gb_trees:insert(Table, describe_table(Table), GbTree) end,
+                gb_trees:empty(), Tables).
 
 -spec get_schemas() -> list(string()).
 
@@ -163,7 +168,7 @@ get_schemas() ->
     case application:get_env(estatsdb, schemas) of
         undefined ->
             ["public"];
-        Schemas ->
+        {ok, Schemas} ->
             Schemas
     end.
 
@@ -182,7 +187,9 @@ get_tables(Schema) ->
 
 -spec describe_table(TableName::string()) -> tuple(). 
 
-describe_table(TableName) ->
+describe_table(FullTableName) ->
+    io:format("Loading schema for ~s...~n", [FullTableName]),
+    TableName = tl(string:tokens(FullTableName, ".")),
     % Tables must have a primary key for this to work...which is a good thing.
     % Returns column name, data type, is_pk
     Sql = "SELECT pg_attribute.attname AS column_name,
@@ -193,7 +200,7 @@ describe_table(TableName) ->
             WHERE pg_attribute.attrelid = $1::regclass
               AND pg_index.indrelid = pg_attribute.attrelid
               AND pg_index.indisprimary
-              AND NOT pg_attribute.attislocal",
+              AND FORMAT_TYPE(pg_attribute.atttypid, pg_attribute.atttypmod) NOT IN ('oid', 'cid', 'xid', 'tid')",
 
     case dbutils:equery(Sql, [TableName]) of
         {ok, Cols, Rows} ->
