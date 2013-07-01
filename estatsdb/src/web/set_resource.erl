@@ -34,7 +34,7 @@ malformed_request(ReqData, Ctx) ->
         {"tablename", TableName} ->
             case schema_server:lookup(TableName) of
                 none ->
-                    R = wrq:set_resp_body(<<"Table ",TableName," is not known to estatsdb. Maybe refresh the schema server?">>, ReqData),
+                    R = wrq:set_resp_body("Table "++TableName++" is not known to estatsdb. Maybe refresh the schema server?", ReqData),
                     {true, R, Ctx};
                 {value, TableInfo} ->
                     % @todo Check PKs etc, here...

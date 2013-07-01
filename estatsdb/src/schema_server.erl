@@ -188,7 +188,7 @@ get_tables(Schema) ->
 -spec describe_table(TableName::string()) -> tuple(). 
 
 describe_table(FullTableName) ->
-    io:format("Loading schema for ~s...~n", [FullTableName]),
+    error_logger:info_msg("Loading schema for ~s...~n", [FullTableName]),
     TableName = tl(string:tokens(FullTableName, ".")),
     % Tables must have a primary key for this to work...which is a good thing.
     % Returns column name, data type, is_pk
@@ -202,8 +202,13 @@ describe_table(FullTableName) ->
               AND pg_index.indisprimary
               AND FORMAT_TYPE(pg_attribute.atttypid, pg_attribute.atttypmod) NOT IN ('oid', 'cid', 'xid', 'tid')",
 
+    ColumnInfo =
     case dbutils:equery(Sql, [TableName]) of
-        {ok, Cols, Rows} ->
-            dbutils:transduce(Cols, Rows)
-    end.
+        {ok, _C, Info} ->
+            Info
+    end,
+
+    PrimaryKeyColumns = ordsets:from_list([ Column || {Column, _, IsPk} <- ColumnInfo, IsPk == true]),
+
+    {ColumnInfo, PrimaryKeyColumns}.
 
