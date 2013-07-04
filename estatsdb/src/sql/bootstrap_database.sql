@@ -29,13 +29,52 @@ CREATE TABLE hourly_example_stats
     PRIMARY KEY(hour, host)
 );
 
+--
+-- Helper function to set metric value(s).
+-- First an attempt is made to INSERT the value. If an entry already exists, it is UPDATEd.
+--
 
-SELECT pg_attribute.attname AS column_name,
-       FORMAT_TYPE(pg_attribute.atttypid, pg_attribute.atttypmod) AS format_type,
-       pg_attribute.attnum = ANY(pg_index.indkey) AS is_pk
-  FROM pg_attribute,
-       pg_index
- WHERE pg_attribute.attrelid = 'hourly_example_stats'::regclass                 
-   AND pg_index.indrelid = pg_attribute.attrelid
-   AND pg_index.indisprimary
-   AND FORMAT_TYPE(pg_attribute.atttypid, pg_attribute.atttypmod) NOT IN ('oid', 'cid', 'xid', 'tid');
+CREATE OR REPLACE
+FUNCTION set_helper(_InsertReturningStatement TEXT, _UpdateReturningStatement TEXT)
+  RETURNS RECORD
+AS $$
+DECLARE
+    _Result RECORD;
+BEGIN
+    BEGIN
+        EXECUTE format('%s', _InsertReturningStatement)
+           INTO STRICT _Result;
+    EXCEPTION
+        WHEN unique_violation THEN
+            EXECUTE format('%s',_UpdateReturningStatement)
+               INTO STRICT _Result;
+    END;
+    RETURN _Result;
+END
+$$
+LANGUAGE plpgsql;
+
+--
+-- Helper function to update a metric value(s).
+-- First an attempt is made to UPDATE the value(s). If no entries exist, it is INSERTed.
+--
+
+CREATE OR REPLACE
+FUNCTION update_helper(_UpdateReturningStatement TEXT, _InsertReturningStatement TEXT)
+  RETURNS RECORD
+AS $$
+DECLARE
+    _Result RECORD;
+BEGIN
+    BEGIN
+        EXECUTE format('%s', _UpdateReturningStatement)
+          INTO _Result;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            EXECUTE format('%s', _InsertReturningStatement)
+               INTO _Result;
+    END;
+    RETURN _Result;
+END
+$$
+LANGUAGE plpgsql;

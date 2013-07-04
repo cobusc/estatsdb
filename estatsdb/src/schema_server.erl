@@ -18,7 +18,13 @@
          describe_table/1
         ]).
 
--record(state, {table_info :: gb_tree()}).
+-record(state, 
+{
+    tables :: gb_tree()
+}).
+
+-include("estatsdb.hrl").
+
 
 %%%===================================================================
 %%% API
@@ -44,8 +50,8 @@ lookup(TableName) ->
 -spec refresh() -> ok.
 
 refresh() ->
-    TableInfo = load_schemas(),
-    gen_server:call(?MODULE, {refresh, #state{table_info=TableInfo}}, infinity).
+    Tables = load_schemas(),
+    gen_server:call(?MODULE, {refresh, #state{tables=Tables}}, infinity).
 
 
 %%%===================================================================
@@ -64,8 +70,8 @@ refresh() ->
 %% @end
 %%--------------------------------------------------------------------
 init([]) ->
-    TableInfo = load_schemas(),
-    {ok, #state{table_info=TableInfo}}.
+    Tables = load_schemas(),
+    {ok, #state{tables=Tables}}.
 
 %%--------------------------------------------------------------------
 %% @private
@@ -83,7 +89,7 @@ init([]) ->
 %%--------------------------------------------------------------------
 
 handle_call({lookup, TableName}, _From, State) ->
-    Reply = gb_trees:lookup(TableName, State#state.table_info),
+    Reply = gb_trees:lookup(TableName, State#state.tables),
     {reply, Reply, State};
 
 handle_call({refresh, NewState}, _From, _State) ->
@@ -191,24 +197,21 @@ describe_table(FullTableName) ->
     error_logger:info_msg("Loading schema for ~s...~n", [FullTableName]),
     TableName = tl(string:tokens(FullTableName, ".")),
     % Tables must have a primary key for this to work...which is a good thing.
-    % Returns column name, data type, is_pk
-    Sql = "SELECT pg_attribute.attname AS column_name,
-                  FORMAT_TYPE(pg_attribute.atttypid, pg_attribute.atttypmod) AS format_type,
-                  pg_attribute.attnum = ANY(pg_index.indkey) AS is_pk
-             FROM pg_attribute,
-                  pg_index
-            WHERE pg_attribute.attrelid = $1::regclass
-              AND pg_index.indrelid = pg_attribute.attrelid
-              AND pg_index.indisprimary
-              AND FORMAT_TYPE(pg_attribute.atttypid, pg_attribute.atttypmod) NOT IN ('oid', 'cid', 'xid', 'tid')",
+    % Returns {column name, data type, is_pk}
+    Sql = "SELECT c.column_name, c.data_type, COALESCE(c.column_name = k.column_name, FALSE) AS is_pk
+             FROM information_schema.table_constraints t
+             LEFT JOIN information_schema.columns c ON (t.table_name = c.table_name AND t.table_schema = c.table_schema)
+             LEFT JOIN information_schema.key_column_usage k ON (t.constraint_name = k.constraint_name AND c.column_name = k.column_name)
+            WHERE t.constraint_type = 'PRIMARY KEY'
+              AND t.table_schema='public'
+              AND t.table_name=$1",
 
-    ColumnInfo =
+    Columns = 
     case dbutils:equery(Sql, [TableName]) of
-        {ok, _C, Info} ->
-            Info
+        {ok, _Cols, Rows} ->
+            [ #schema_column{name=N, type=T, is_pk=P} || {N, T, P} <- Rows ]
     end,
+    #table_info{columns=Columns}.
 
-    PrimaryKeyColumns = ordsets:from_list([ Column || {Column, _, IsPk} <- ColumnInfo, IsPk == true]),
 
-    {ColumnInfo, PrimaryKeyColumns}.
 

@@ -95,4 +95,47 @@ test() ->
 %% $$
 %% LANGUAGE plpgsql;
 
+% Format of TableInfo from db:
+% [
+%   { <<"columnname">>, <<"type_info">>, true},
+%   ...
+% ]
+
+% Format of QueryArgs:
+% [
+%     {"columnname", "columnvalue"},
+%     ...
+% ]
+
+% Translate QueryArgs to Args:
+% [
+%     {<<"columnname">>, appropriate_type},
+%     ...
+% ]
+%
+% As part of the translation one will also pick up errors such as unknown columns.
+%
+% Given PkList :: ordset(), one can then do ColumnsSupplied = ordsets:from_list(proplists:get_keys(Args))
+% and HasAllPks = ordsets:is_subset(PkList, ColumnsSupplied)
+%
+
+%-spec translate_args(QueryArgs::list({K::string(),V::string()}), 
+%                     TableInfo::list({N::binary(),{T::binary(),Pk::boolean()}})) -> list({N::binary(), V::any()}).
+%
+%translate_args({K,V}, TableInfo) ->
+%    BinKey = list_to_binary(K),
+%    case proplists:lookup(list_to_binary(K), TableInfo) of
+%        none ->
+%            none;
+%        {BinKey, {TypeInfo, _}} ->
+%            {BinKey, convert_type(V, TypeInfo)}
+%    end.
+%
+%
+%-spec convert_type(Value::string(), TypeInfo::binary()) -> any().
+%
+%convert_type(V, <<"bigint">>) ->
+%
+
+
 

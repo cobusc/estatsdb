@@ -1,33 +1,14 @@
-%% @author cobusc <cobusc@miranetworks.net>
-
--module(set_resource).
--export([init/1, 
-         to_json/2, 
-         content_types_provided/2, 
-         allowed_methods/2, 
-         malformed_request/2
-        ]).
-
--include_lib("webmachine/include/webmachine.hrl").
+-module(request).
+-export([build/1]).
 -include("estatsdb.hrl").
 
-init(Config) ->
-    {ok, Config}.
-    %%enable tracing the decision core for debugging
-%    {{trace, "/tmp"}, Config}.
+-type proplist(A, B) :: list({A,B}).
 
-content_types_provided(RD, Ctx) ->
-    {[ {"application/json", to_json} ], RD, Ctx}.
+-spec build(QueryArgs::proplist(string(), string()) -> 
+    {ok, #request_info{}} |
+    {error, Reason::binary()}.
 
-allowed_methods(RD, Ctx) ->
-    {['GET'], RD, Ctx}.
-
-%%
-%% @doc Check if the request parameters are correct and complete
-%%
-
-malformed_request(ReqData, Ctx) ->
-    QueryArgs = wrq:req_qs(ReqData),
+build(QueryArgs) ->
     case proplists:lookup("tablename", QueryArgs) of
         none ->
             R = wrq:set_resp_body(<<"tablename argument not specified">>, ReqData),
@@ -35,7 +16,7 @@ malformed_request(ReqData, Ctx) ->
         {"tablename", TableName} ->
             case schema_server:lookup(TableName) of
                 none ->
-                    R = wrq:set_resp_body("Table "++TableName++" is not known to estatsdb. Maybe refresh the schema server?", ReqData),
+                    R = wrq:set_resp_body(<<"Table ",TableName," is not known to estatsdb. Maybe refresh the schema server?">>, ReqData),
                     {true, R, Ctx};
                 {value, #table_info{columns=Cols}=TableInfo} ->
                     % @todo Check PKs etc, here...
@@ -71,28 +52,3 @@ malformed_request(ReqData, Ctx) ->
                     end
 
             end
-    end.
-
-%%
-%% @doc Response formatting in JSON format.
-%%
--spec to_json(ReqData::#wm_reqdata{}, RequestInfo::#request_info{}) -> 
-    {JsonResponse::string(), ReqData::#wm_reqdata{}, {list({string(), string()}), tuple()}}.
-
-to_json(ReqData, RequestInfo)
-when is_record(RequestInfo, request_info) ->
-    io:format("~s~n", [sqlbuilder:set_sql(RequestInfo)]),
-    Result = {error, not_implemented}, % @todo
-    case Result of
-        {ok, Data} -> 
-            JsonResponse = mochijson2:encode({struct, [{success, true}, {data, Data}]}),
-            {JsonResponse, ReqData, undefined};
-        {error, Reason} ->
-            JsonResponse = mochijson2:encode({struct, [{success, false},{reason, Reason}]}),
-            {JsonResponse, ReqData, undefined}
-    end.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%                            Helper functions
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
