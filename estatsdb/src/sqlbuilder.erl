@@ -56,7 +56,7 @@ update_sql(ReqInfo, TableInfo) ->
     AsSql = build_as_sql(TableInfo),
     UpdateSql = build_update_sql(ReqInfo),
     SetSql = build_set_sql(ReqInfo),
-    ["SELECT * FROM update_helper($$", UpdateSql, " ", ReturningSql, "$$, $$", SetSql, " ", ReturningSql, "$$) AS ", AsSql].
+    ["SELECT * FROM update_helper($$", UpdateSql, " ", ReturningSql, "$$, $$", SetSql, " ", ReturningSql, "$$) ", AsSql].
 
 %% Example of setting a metric value:
 %%
