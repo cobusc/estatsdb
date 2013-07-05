@@ -45,7 +45,6 @@ malformed_request(ReqData, Ctx) ->
 to_json(ReqData, RequestInfo)
 when is_record(RequestInfo, request_info) ->
     Sql = sqlbuilder:set_sql(RequestInfo),
-    io:format("~s~n", [Sql]),
     {ok, Cols, Rows} = pgdb_tools:equery(Sql, []),
     [PropList] = pgdb_tools:transduce(Cols, Rows),
     Sanitized = request:sanitize_response_for_json(PropList),
