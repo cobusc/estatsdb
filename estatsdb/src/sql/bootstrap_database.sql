@@ -19,16 +19,6 @@ GRANT ALL ON DATABASE estatsdb TO estatsdb;
 \connect estatsdb;
 SET ROLE estatsdb;
 
-CREATE TABLE hourly_example_stats
-(
-    hour TIMESTAMP(0),
-    host TEXT,
-    metric1 INTEGER,
-    metric2 FLOAT,
-    metric3 BIGINT,
-    PRIMARY KEY(hour, host)
-);
-
 --
 -- Helper function to set metric value(s).
 -- First an attempt is made to INSERT the value. If an entry already exists, it is UPDATEd.
@@ -72,11 +62,11 @@ DECLARE
 BEGIN
     BEGIN
         EXECUTE format('%s %s', _UpdateStatement, _ReturningStatement)
-          INTO _Result;
+          INTO STRICT _Result;
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
             EXECUTE format('%s %s', _InsertStatement, _ReturningStatement)
-               INTO _Result;
+               INTO STRICT _Result;
     END;
     RETURN _Result;
 END
