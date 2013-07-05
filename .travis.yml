@@ -5,4 +5,6 @@ otp_release:
   - R15B02
   - R15B01
   - R14B04
+before_script:
+  - psql -f estatsdb/src/sql/bootstrap_database.sql -U postgres
 script: "make -C estatsdb test"
