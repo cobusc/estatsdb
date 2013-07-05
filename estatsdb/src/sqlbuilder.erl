@@ -7,13 +7,18 @@
          build_returning_sql/1,
          build_as_sql/1
         ]).
+
+-ifdef(TEST).
+-compile(export_all).
+-endif.
+
 -include("estatsdb.hrl").
 
 -spec build_set_sql(ReqInfo::#request_info{}) -> iodata().
 
 build_set_sql(#request_info{table_info=TableInfo, columns=Cols}) ->
     Table = TableInfo#table_info.table_name,
-    ["INSERT INTO ", Table, "(", string:join([ binary_to_list(N) || #column{name=N} <- Cols], ", "), 
+    ["INSERT INTO ", Table, " (", string:join([ binary_to_list(N) || #column{name=N} <- Cols], ", "), 
      ") VALUES (", string:join([ io_lib:format("'~s'::~s", [V, T]) || #column{value=V,type=T} <- Cols], ", "), ")"].
 
 

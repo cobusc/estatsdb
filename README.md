@@ -1,10 +1,9 @@
+[![Build Status](https://www.travis-ci.org/cobusc/estatsdb.png?branch=master)](https://www.travis-ci.org/cobusc/estatsdb)
+
 estatsdb
 ========
 
 Erlang server for collecting stats in a PostgreSQL DB
-
-WORK IN PROGRESS
-================
 
 Usage
 -----

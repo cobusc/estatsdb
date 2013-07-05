@@ -15,5 +15,8 @@ clean:
 distclean: clean
 	@./rebar delete-deps
 
+test: all
+	@./rebar skip_deps=true eunit
+
 docs:
 	@erl -noshell -run edoc_run application '$(APP)' '"."' '[]'
