@@ -1,8 +1,9 @@
-%%-*- mode: erlang -*-
+%% vim: syntax=erlang
+
 {application, estatsdb,
  [
   {description, "estatsdb"},
-  {vsn, "1"},
+  {vsn, "1.0.0"},
   {modules, []},
   {registered, []},
   {applications, [

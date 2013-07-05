@@ -6,6 +6,9 @@ APP := estatsdb
 all: deps
 	@./rebar compile
 
+release: all
+	@./rebar --force generate
+
 deps:
 	@./rebar get-deps
 
