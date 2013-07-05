@@ -22,10 +22,15 @@ CREATE TABLE myapp.daily_stats
 );
 ```
 
-Refresh the _schema\_server_:
-```
+Refresh the _schema\_server_ from the Erlang shell:
+```erlang
 schema_server:refresh().
 ```
+or alternatively by calling a URL:
+```
+curl "http://localhost:8000/refresh"
+```
+Note that the refresh call is only allowed when made from the local host.
 
 To *set* values, call:
 ```
