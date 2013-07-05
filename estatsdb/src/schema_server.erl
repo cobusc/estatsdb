@@ -186,7 +186,7 @@ get_tables(Schema) ->
                    FROM information_schema.tables 
                   WHERE table_schema=$1",
 
-    case dbutils:equery(SelectSql, [Schema]) of
+    case pgdb_tools:equery(SelectSql, [Schema]) of
         {ok, _Cols, Rows} ->
             lists:map(fun ({X}) -> binary_to_list(X) end, Rows)
     end.
@@ -207,7 +207,7 @@ describe_table(FullTableName) ->
               AND t.table_name=$1",
 
     Columns = 
-    case dbutils:equery(Sql, [TableName]) of
+    case pgdb_tools:equery(Sql, [TableName]) of
         {ok, _Cols, Rows} ->
             [ #schema_column{name=N, type=T, is_pk=P} || {N, T, P} <- Rows ]
     end,
