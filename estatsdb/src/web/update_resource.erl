@@ -9,6 +9,7 @@
         ]).
 
 -include_lib("webmachine/include/webmachine.hrl").
+-include("estatsdb.hrl").
 
 init(Config) ->
     {ok, Config}.
@@ -27,38 +28,30 @@ allowed_methods(RD, Ctx) ->
 
 malformed_request(ReqData, Ctx) ->
     QueryArgs = wrq:req_qs(ReqData),
-    case proplists:lookup("tablename", QueryArgs) of
-        none ->
-            R = wrq:set_resp_body(<<"tablename argument not specified">>, ReqData),
+    case request:build(QueryArgs) of
+        {error, Reason} ->
+            R = wrq:set_resp_body(Reason, ReqData),
             {true, R, Ctx};
-        {"tablename", TableName} ->
-            case schema_server:lookup(TableName) of
-                none ->
-                    R = wrq:set_resp_body(<<"Table ",TableName," is not known to estatsdb. Maybe refresh the schema server?">>, ReqData),
-                    {true, R, Ctx};
-                {value, TableInfo} ->
-                    % @todo Check PKs etc, here...
-                    % If all OK, pass TableInfo and QueryArgs on...
-                    {false, ReqData, {QueryArgs, TableInfo}}
-            end
+        {ok, #request_info{}=ReqInfo} ->
+            {false, ReqData, ReqInfo}
     end.
 
 %%
 %% @doc Response formatting in JSON format.
 %%
--spec to_json(ReqData::#wm_reqdata{}, {QueryArgs::list({string(), string()}), tuple()}) -> 
+-spec to_json(ReqData::#wm_reqdata{}, RequestInfo::#request_info{}) -> 
     {JsonResponse::string(), ReqData::#wm_reqdata{}, {list({string(), string()}), tuple()}}.
 
-to_json(ReqData, {_QueryArgs, _TableInfo}=Ctx) ->
-    Result = {error, not_implemented}, % @todo
-    case Result of
-        {ok, Data} -> 
-            JsonResponse = mochijson2:encode({struct, [{success, true}, {data, Data}]}),
-            {JsonResponse, ReqData, Ctx};
-        {error, Reason} ->
-            JsonResponse = mochijson2:encode({struct, [{success, false},{reason, Reason}]}),
-            {JsonResponse, ReqData, Ctx}
-    end.
+to_json(ReqData, RequestInfo)
+when is_record(RequestInfo, request_info) ->
+    Sql = sqlbuilder:update_sql(RequestInfo),
+    io:format("~s~n", [Sql]),
+    {ok, Cols, Rows} = pgdb_tools:equery(Sql, []),
+    [PropList] = pgdb_tools:transduce(Cols, Rows),
+    Sanitized = request:sanitize_response_for_json(PropList),
+    Result = {struct, Sanitized},
+    JsonResponse = mochijson2:encode(Result),
+    {JsonResponse, ReqData, undefined}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                            Helper functions

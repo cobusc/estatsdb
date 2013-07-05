@@ -1,75 +1,71 @@
 -module(sqlbuilder).
--export([set_sql/1,
-         update_sql/2
+-export([% Functions used by the web resources
+         set_sql/1,
+         update_sql/1,
+
+         % Functions used by the schema server
+         build_returning_sql/1,
+         build_as_sql/1
         ]).
 -include("estatsdb.hrl").
 
 -spec build_set_sql(ReqInfo::#request_info{}) -> iodata().
 
-build_set_sql(#request_info{table_name=T, columns=Cols}) ->
-    ["INSERT INTO ", T, "(", string:join([ binary_to_list(Name) || #request_column{name=Name} <- Cols], ", "), 
-     ") VALUES (", string:join([ binary_to_list(Value) || #request_column{value=Value} <- Cols], ", "), ")"].
+build_set_sql(#request_info{table_info=TableInfo, columns=Cols}) ->
+    Table = TableInfo#table_info.table_name,
+    ["INSERT INTO ", Table, "(", string:join([ binary_to_list(N) || #column{name=N} <- Cols], ", "), 
+     ") VALUES (", string:join([ io_lib:format("'~s'::~s", [V, T]) || #column{value=V,type=T} <- Cols], ", "), ")"].
 
 
 -spec build_overwrite_sql(ReqInfo::#request_info{}) -> iodata().
 
-build_overwrite_sql(#request_info{table_name=T, columns=Cols}) ->
-    ["UPDATE ", T,
-     " SET ", string:join([io_lib:format("~s = ~s", [Name, Value]) || #request_column{name=Name,value=Value,is_pk=false} <- Cols], ", "),
-     " WHERE ", string:join([io_lib:format("~s = ~s", [Name, Value]) || #request_column{name=Name,value=Value,is_pk=true} <- Cols], " AND ")].
+build_overwrite_sql(#request_info{table_info=TableInfo, columns=Cols}) ->
+    Table = TableInfo#table_info.table_name,
+    ["UPDATE ", Table,
+     " SET ", string:join([io_lib:format("~s = '~s'::~s", [N, V, T]) || #column{name=N,value=V,type=T,is_pk=false} <- Cols], ", "),
+     " WHERE ", string:join([io_lib:format("~s = '~s'::~s", [N, V, T]) || #column{name=N,value=V,type=T,is_pk=true} <- Cols], " AND ")].
 
 
 -spec build_update_sql(ReqInfo::#request_info{}) -> iodata().
 
-build_update_sql(#request_info{table_name=T, columns=Cols}) ->
-    ["UPDATE ", T,
-     " SET ", string:join([io_lib:format("~s = COALESCE(~s, 0) + ~s", [Name, Name, Value]) || #request_column{name=Name,value=Value,is_pk=false} <- Cols], ", "),
-    " WHERE ", string:join([io_lib:format("~s = ~s", [Name, Value]) || #request_column{name=Name,value=Value,is_pk=true} <- Cols], " AND ")].
+build_update_sql(#request_info{table_info=TableInfo, columns=Cols}) ->
+    Table = TableInfo#table_info.table_name,
+    ["UPDATE ", Table,
+     " SET ", string:join([io_lib:format("~s = COALESCE(~s, 0) + '~s'::~s", [N, N, V, T]) || #column{name=N,value=V,type=T,is_pk=false} <- Cols], ", "),
+    " WHERE ", string:join([io_lib:format("~s = '~s'::~s", [N, V, T]) || #column{name=N,value=V,type=T,is_pk=true} <- Cols], " AND ")].
      
 
--spec build_returning_sql(TableInfo::#table_info{}) -> iodata().
+-spec build_returning_sql(Cols::list(#column{})) -> iodata().
 
-build_returning_sql(#table_info{columns=Cols}) ->
+build_returning_sql(Cols) ->
     % "RETURNING a,b,c,d"
-    "RETURNING "++string:join([ binary_to_list(Name) || #schema_column{name=Name} <- Cols ], ", ").
+    "RETURNING "++string:join([ binary_to_list(N) || #column{name=N} <- Cols ], ", ").
 
 
--spec build_as_sql(TableInfo::#table_info{}) -> iodata().
+-spec build_as_sql(Cols::list(#column{})) -> iodata().
 
-build_as_sql(#table_info{columns=Cols}) ->
+build_as_sql(Cols) ->
     % "AS (hour TIMESTAMP, host TEXT, metric1 INTEGER, metric2 FLOAT, metric3 BIGINT)"
-    "AS ("++string:join([ io_lib:format("~s ~s", [Name, Type]) || #schema_column{name=Name, type=Type} <- Cols ], ", ")++")".
+    "AS ("++string:join([ io_lib:format("~s ~s", [N, T]) || #column{name=N, type=T} <- Cols ], ", ")++")".
+
 
 -spec set_sql(ReqInfo::#request_info{}) -> iodata().
 
-set_sql(ReqInfo) ->
-    ReturningSql = build_returning_sql(ReqInfo#request_info.table_info),
-    AsSql = build_as_sql(ReqInfo#request_info.table_info),
+set_sql(#request_info{table_info=TableInfo}=ReqInfo) ->
+%    ReturningSql = build_returning_sql(ReqInfo#request_info.table_info),
+%    AsSql = build_as_sql(ReqInfo#request_info.table_info),
+    #table_info{returning_sql=ReturningSql,as_sql=AsSql} = TableInfo,
     SetSql = build_set_sql(ReqInfo),
     OverwriteSql = build_overwrite_sql(ReqInfo),
-    ["SELECT * FROM set_helper($$", SetSql, " ", ReturningSql, "$$, $$", OverwriteSql, " ", ReturningSql, "$$) AS ", AsSql].
+    ["SELECT * FROM set_helper($$", SetSql, "$$, $$", OverwriteSql, "$$,$$", ReturningSql, "$$) ", AsSql].
 
--spec update_sql(ReqInfo::#request_info{}, TableInfo::#table_info{}) -> iodata().
+-spec update_sql(ReqInfo::#request_info{}) -> iodata().
 
-update_sql(ReqInfo, TableInfo) ->
-    ReturningSql = build_returning_sql(TableInfo),
-    AsSql = build_as_sql(TableInfo),
+update_sql(#request_info{table_info=TableInfo}=ReqInfo) ->
+%    ReturningSql = build_returning_sql(ReqInfo#request_info.table_info),
+%    AsSql = build_as_sql(ReqInfo#request_info.table_info),
+    #table_info{returning_sql=ReturningSql,as_sql=AsSql} = TableInfo,
     UpdateSql = build_update_sql(ReqInfo),
     SetSql = build_set_sql(ReqInfo),
-    ["SELECT * FROM update_helper($$", UpdateSql, " ", ReturningSql, "$$, $$", SetSql, " ", ReturningSql, "$$) ", AsSql].
+    ["SELECT * FROM update_helper($$", UpdateSql, "$$, $$", SetSql, "$$,$$", ReturningSql, "$$) ", AsSql].
 
-%% Example of setting a metric value:
-%%
-%% SELECT *
-%%   FROM set_helper(
-%%      'insert into hourly_example_stats(hour, host, metric1) values (''2013-01-01T00:'', ''test'', 1) RETURNING ...', 
-%%      'update hourly_example_stats set metric1=1 where hour=''2013-01-01T00:'' and host=''test'' RETURNING ...') 
-%%     AS (hour TIMESTAMP, host TEXT, metric1 INTEGER, metric2 FLOAT, metric3 BIGINT);
-%%     
-
-%% Example of updating a metric value:
-
-%% SELECT *
-%%   FROM update_helper('update hourly_example_stats set metric1=1 where hour=''2013-01-01T00:'' and host=''test'' RETURNING ...',
-%%                      'insert into hourly_example_stats(hour, host, metric1) values (''2013-01-01T00:'', ''test'', 1) RETURNING ...') 
-%%     AS (hour TIMESTAMP, host TEXT, metric1 INTEGER, metric2 FLOAT, metric3 BIGINT);

@@ -44,16 +44,14 @@ malformed_request(ReqData, Ctx) ->
 
 to_json(ReqData, RequestInfo)
 when is_record(RequestInfo, request_info) ->
-    io:format("~s~n", [sqlbuilder:set_sql(RequestInfo)]),
-    Result = {error, not_implemented}, % @todo
-    case Result of
-        {ok, Data} -> 
-            JsonResponse = mochijson2:encode({struct, [{success, true}, {data, Data}]}),
-            {JsonResponse, ReqData, undefined};
-        {error, Reason} ->
-            JsonResponse = mochijson2:encode({struct, [{success, false},{reason, Reason}]}),
-            {JsonResponse, ReqData, undefined}
-    end.
+    Sql = sqlbuilder:set_sql(RequestInfo),
+    io:format("~s~n", [Sql]),
+    {ok, Cols, Rows} = pgdb_tools:equery(Sql, []),
+    [PropList] = pgdb_tools:transduce(Cols, Rows),
+    Sanitized = request:sanitize_response_for_json(PropList),
+    Result = {struct, Sanitized},
+    JsonResponse = mochijson2:encode(Result),
+    {JsonResponse, ReqData, undefined}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %                            Helper functions

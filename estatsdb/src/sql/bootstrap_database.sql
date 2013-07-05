@@ -35,18 +35,20 @@ CREATE TABLE hourly_example_stats
 --
 
 CREATE OR REPLACE
-FUNCTION set_helper(_InsertReturningStatement TEXT, _UpdateReturningStatement TEXT)
+FUNCTION set_helper(_InsertStatement TEXT, 
+                    _UpdateStatement TEXT,
+                    _ReturningStatement TEXT)
   RETURNS RECORD
 AS $$
 DECLARE
     _Result RECORD;
 BEGIN
     BEGIN
-        EXECUTE format('%s', _InsertReturningStatement)
+        EXECUTE format('%s %s', _InsertStatement, _ReturningStatement)
            INTO STRICT _Result;
     EXCEPTION
         WHEN unique_violation THEN
-            EXECUTE format('%s',_UpdateReturningStatement)
+            EXECUTE format('%s %s',_UpdateStatement, _ReturningStatement)
                INTO STRICT _Result;
     END;
     RETURN _Result;
@@ -60,18 +62,20 @@ LANGUAGE plpgsql;
 --
 
 CREATE OR REPLACE
-FUNCTION update_helper(_UpdateReturningStatement TEXT, _InsertReturningStatement TEXT)
+FUNCTION update_helper(_UpdateStatement TEXT, 
+                       _InsertStatement TEXT,
+                       _ReturningStatement TEXT)
   RETURNS RECORD
 AS $$
 DECLARE
     _Result RECORD;
 BEGIN
     BEGIN
-        EXECUTE format('%s', _UpdateReturningStatement)
+        EXECUTE format('%s %s', _UpdateStatement, _ReturningStatement)
           INTO _Result;
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
-            EXECUTE format('%s', _InsertReturningStatement)
+            EXECUTE format('%s %s', _InsertStatement, _ReturningStatement)
                INTO _Result;
     END;
     RETURN _Result;

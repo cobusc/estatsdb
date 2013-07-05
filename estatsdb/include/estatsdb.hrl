@@ -1,26 +1,22 @@
 
--record(schema_column, 
+-record(column, 
 { 
     name :: binary(), 
-    type :: binary(), 
-    is_pk :: boolean()
+    type :: binary(),
+    value :: binary(),
+    is_pk = false :: boolean()
 }). 
  
 -record(table_info, 
-{ 
-    columns :: list(#schema_column{}) 
-}). 
-
--record(request_column,
 {
-    name :: binary(),
-    value :: any(),
-    is_pk :: boolean()
-}).
+    table_name :: binary(),
+    as_sql :: iodata(),
+    returning_sql :: iodata(), 
+    columns :: list(#column{}) 
+}). 
 
 -record(request_info,
 {
-    table_name :: string(),
     table_info :: #table_info{},
-    columns :: list(#request_column{})
+    columns :: list(#column{})
 }).

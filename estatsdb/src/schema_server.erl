@@ -161,26 +161,28 @@ load_schemas() ->
 
     io:format("Schemas: ~p~n", [Schemas]),
     
-    Tables = lists:foldl(fun (Schema, Acc) -> get_tables(Schema) ++ Acc end, [], Schemas),
+    Tables = lists:foldl(fun (Schema, Acc) -> lists:append(get_tables(Schema), Acc) end, [], Schemas),
 
     io:format("Tables: ~p~n", [Tables]),
 
     lists:foldl(fun (Table, GbTree) -> gb_trees:insert(Table, describe_table(Table), GbTree) end,
                 gb_trees:empty(), Tables).
 
--spec get_schemas() -> list(string()).
+-spec get_schemas() -> list(binary()).
 
 get_schemas() ->
     case application:get_env(estatsdb, schemas) of
         undefined ->
-            ["public"];
+            [<<"public">>];
         {ok, Schemas} ->
             Schemas
     end.
 
--spec get_tables(Schema::string()) -> list(string()).
+-spec get_tables(Schema::binary()) -> list(binary()).
 
-get_tables(Schema) ->
+get_tables(Schema)
+when is_binary(Schema) ->
+    io:format("Getting tables for schema '~s'...~n", [Schema]),
     % SQL used to select tables in a particular schema
     SelectSql = "SELECT $1::text||'.'||table_name AS table_name
                    FROM information_schema.tables 
@@ -188,14 +190,14 @@ get_tables(Schema) ->
 
     case pgdb_tools:equery(SelectSql, [Schema]) of
         {ok, _Cols, Rows} ->
-            lists:map(fun ({X}) -> binary_to_list(X) end, Rows)
+            lists:map(fun ({X}) -> X end, Rows)
     end.
 
--spec describe_table(TableName::string()) -> tuple(). 
+-spec describe_table(FullTableName::binary()) -> tuple(). 
 
 describe_table(FullTableName) ->
-    error_logger:info_msg("Loading schema for ~s...~n", [FullTableName]),
-    TableName = tl(string:tokens(FullTableName, ".")),
+    io:format("Loading schema for ~s...~n", [FullTableName]),
+    [SchemaName, TableName] = binary:split(FullTableName, <<".">>),
     % Tables must have a primary key for this to work...which is a good thing.
     % Returns {column name, data type, is_pk}
     Sql = "SELECT c.column_name, c.data_type, COALESCE(c.column_name = k.column_name, FALSE) AS is_pk
@@ -203,15 +205,20 @@ describe_table(FullTableName) ->
              LEFT JOIN information_schema.columns c ON (t.table_name = c.table_name AND t.table_schema = c.table_schema)
              LEFT JOIN information_schema.key_column_usage k ON (t.constraint_name = k.constraint_name AND c.column_name = k.column_name)
             WHERE t.constraint_type = 'PRIMARY KEY'
-              AND t.table_schema='public'
-              AND t.table_name=$1",
+              AND t.table_schema=$1
+              AND t.table_name=$2
+            ORDER BY is_pk DESC, c.column_name ASC",
 
     Columns = 
-    case pgdb_tools:equery(Sql, [TableName]) of
+    case pgdb_tools:equery(Sql, [SchemaName, TableName]) of
         {ok, _Cols, Rows} ->
-            [ #schema_column{name=N, type=T, is_pk=P} || {N, T, P} <- Rows ]
+            [ #column{name=N, type=T, is_pk=P} || {N, T, P} <- Rows ]
     end,
-    #table_info{columns=Columns}.
+    #table_info{table_name = FullTableName, 
+                columns = Columns,
+                returning_sql = sqlbuilder:build_returning_sql(Columns),
+                as_sql = sqlbuilder:build_as_sql(Columns)
+               }.
 
 
 
