@@ -1,5 +1,6 @@
 -module(functional_tests).
 -include_lib("eunit/include/eunit.hrl").
+-include("estatsdb.hrl").
 
 ensure_loaded(App) ->
     case application:load(App) of
@@ -74,6 +75,36 @@ update_existing_test() ->
     {ok, {{_Version, 200, _ReasonPhrase}, _Headers, ResponseData}} = httpc:request(Url),
     ?assertEqual("{\"host\":\"test_host\",\"hour\":\"2013-01-01T01:00:00.000\",\"metric1\":2,\"metric2\":2.0,\"metric3\":3}",
                  ResponseData).
+
+
+no_tablename_specified_test() ->
+    Url = "http://localhost:8000/update?host=test_host&hour=2013-01-01T01:&metric1=1&metric3=3",
+    {ok, {{_Version, 400, _ReasonPhrase}, _Headers, ResponseData}} = httpc:request(Url),
+    ?assertEqual(?ERROR_NO_TABLE, ResponseData).
+
+
+unknown_table_test() ->
+    Url = "http://localhost:8000/update?tablename=public.non_existent_table&host=test_host&hour=2013-01-01T01:&metric1=1&metric3=3",
+    {ok, {{_Version, 400, _ReasonPhrase}, _Headers, ResponseData}} = httpc:request(Url),
+    ?assertEqual(?ERROR_UNKNOWN_TABLE, ResponseData).
+
+
+missing_primary_key_test() ->
+    Url = "http://localhost:8000/update?tablename=public.hourly_example_stats&host=test_host&metric1=1&metric3=3",
+    {ok, {{_Version, 400, _ReasonPhrase}, _Headers, ResponseData}} = httpc:request(Url),
+    ?assertEqual(?ERROR_MISSING_PK, ResponseData).
+
+
+unknown_column_test() ->
+    Url = "http://localhost:8000/update?tablename=public.hourly_example_stats&host=test_host&hour=2013-01-01T01:&unknown=1&metric3=3",
+    {ok, {{_Version, 400, _ReasonPhrase}, _Headers, ResponseData}} = httpc:request(Url),
+    ?assertEqual(?ERROR_UNKNOWN_COLUMN, ResponseData).
+
+
+missing_metric_test() ->
+    Url = "http://localhost:8000/update?tablename=public.hourly_example_stats&host=test_host&hour=2013-01-01T01:",
+    {ok, {{_Version, 400, _ReasonPhrase}, _Headers, ResponseData}} = httpc:request(Url),
+    ?assertEqual(?ERROR_NO_METRIC, ResponseData).
 
 
 teardown_test() ->
