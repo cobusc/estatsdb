@@ -24,7 +24,17 @@ build(QueryArgs) ->
      {error, Reason::string()}.
 
 build_for_table(TableName, QueryArgsSansTableName) ->
-    case schema_server:lookup(list_to_binary(TableName)) of
+    CanonicalTableName =
+    case string:tokens(TableName, ".") of
+        [TableName] -> % No schema specified
+            "public."++TableName;
+        [_Schema, _Table] -> % Schema specified
+            TableName;
+        _ -> % Problem. Table lookup will fail
+            TableName
+    end,
+
+    case schema_server:lookup(list_to_binary(CanonicalTableName)) of
         none ->
             {error, ?ERROR_UNKNOWN_TABLE};
         {value, #table_info{}=TableInfo} ->

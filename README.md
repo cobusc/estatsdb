@@ -3,7 +3,14 @@
 estatsdb
 ========
 
-Erlang server for collecting stats in a PostgreSQL DB
+Estatsdb is an Erlang server which collect metrics in a PostgreSQL DB. While there are many tools for publishing metric to backends like graphite, I had the need to publish metrics to a database which
+* can be used by reporting tools like JasperReports,
+* allows for the creation of views, and
+* provides a flexible querying interface.
+
+The application reads the database table definitions of tables in the specified schemas (default "public") at startup or when refreshed. The definitions are used to 
+* check the validity of requests and
+* construct SQL queries using explicit type casts from strings (the values passed in the URL) to the known column types in the database.
 
 Usage
 -----
@@ -72,5 +79,4 @@ This will return something like:
 
 As for the *set* function, the table name and primary key values *must* always be specified. At least *one* metric value is required.
 If the value to update was not set before, the new value is set. Otherwise, the existing value is incremented with the specified value.
-
 
