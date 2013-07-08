@@ -1,7 +1,5 @@
 -module(request).
--export([build/1,
-         sanitize_response_for_json/1
-        ]).
+-export([build/1]).
 -include("estatsdb.hrl").
 
 -type proplist(A, B) :: list({A,B}).
@@ -47,20 +45,3 @@ build(QueryArgs) ->
             end
     end.
 
-sanitize_response_for_json(PropList) ->
-    Sanitize = fun ({K,V}) ->
-        {K, sanitize_value_for_json(V)}
-    end,
-    lists:map(Sanitize, PropList).
-
-sanitize_value_for_json({Y,M,D}=Date)
-when is_integer(Y), is_integer(M), is_integer(D) ->
-    list_to_binary(pgdb_tools:date_to_string(Date));
-
-sanitize_value_for_json({{Y,Mo,D},{H,Mi,S}}=Timestamp)
-when is_integer(Y), is_integer(Mo), is_integer(D),
-     is_integer(H), is_integer(Mi), is_float(S) ->
-    list_to_binary(pgdb_tools:timestamp_to_string(Timestamp));
-
-sanitize_value_for_json(Other) ->
-    Other.

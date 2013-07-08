@@ -47,7 +47,7 @@ when is_record(RequestInfo, request_info) ->
     Sql = sqlbuilder:update_sql(RequestInfo),
     {ok, Cols, Rows} = pgdb_tools:equery(Sql, []),
     [PropList] = pgdb_tools:transduce(Cols, Rows),
-    Sanitized = request:sanitize_response_for_json(PropList),
+    Sanitized = response:sanitize_for_json(PropList),
     Result = {struct, Sanitized},
     JsonResponse = mochijson2:encode(Result),
     {JsonResponse, ReqData, undefined}.
