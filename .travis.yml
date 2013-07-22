@@ -7,4 +7,5 @@ otp_release:
   - R14B04
 before_script:
   - psql -f estatsdb/src/sql/bootstrap_database.sql -U postgres
+  - psql -f estatsdb/src/sql/create_estatsdb_functions.sql -U postgres estatsdb
 script: "make -C estatsdb test"

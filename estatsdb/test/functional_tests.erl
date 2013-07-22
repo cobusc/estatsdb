@@ -156,11 +156,12 @@ performance_test_() ->
     {timeout, 10, [fun () ->
 
      Url = "http://localhost:8000/update?tablename=hourly_example_stats&host=test_host&hour=2013-01-01T23:&metric1=1&metric3=3",
+     ?assertMatch({ok, {{_Version, 200, _ReasonPhrase}, _Headers, _ResponseData}}, httpc:request(Url)),
      Update = fun() ->
-         httpc:request(Url)
+         ?assertMatch({ok, {{_Version, 200, _ReasonPhrase}, _Headers, _ResponseData}}, httpc:request(Url))
      end,
 
-     [ erlang:spawn(Update) || _ <- lists:seq(1, 200) ],
+     [ erlang:spawn(Update) || _ <- lists:seq(1, 199) ],
 
      CheckUrl = "http://localhost:8000/get?tablename=hourly_example_stats&host=test_host&hour=2013-01-01T23:&metric1&metric3",
      ExpectedResponse = "{\"host\":\"test_host\",\"hour\":\"2013-01-01T23:00:00.000\",\"metric1\":200,\"metric3\":600}",
