@@ -13,6 +13,10 @@ The application reads the database table definitions of tables in the specified 
 * check the validity of requests and
 * construct SQL queries using explicit type casts from strings (the values passed in the URL) to the known column types in the database.
 
+Requirements
+------------
+Currently PostgreSQL 9.1 or higher is requiered due to the use of the `format()` function. See: http://www.postgresql.org/docs/9.1/static/functions-string.html . It is only used for convenience and should be trivial to remove in order to support older versions as well.
+
 Usage
 -----
 
@@ -96,3 +100,8 @@ This will return something like:
 }
 ```
 As for the other functionality, the tablename and primary key columns and values are expected. Note that only the specified metrics will be returned. If there is no data, an HTTP 404 response is returned.
+
+Notes on concurrency
+--------------------
+In the event that two (or more) requests simultaneously try to create the same primary key in a table, some of the requests may fail with an HTTP 500 error. It is up to the caller to resubmit the request.
+
