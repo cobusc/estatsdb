@@ -44,7 +44,3 @@ to_json(ReqData, Ctx) ->
     JsonResponse = mochijson2:encode({struct,[{"success", true}]}),
     {JsonResponse, ReqData, Ctx}.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%                            Helper functions
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-

@@ -2,6 +2,7 @@
 -export([% Functions used by the web resources
          set_sql/1,
          update_sql/1,
+         select_sql/1,
 
          % Functions used by the schema server
          build_returning_sql/1,
@@ -57,8 +58,6 @@ build_as_sql(Cols) ->
 -spec set_sql(ReqInfo::#request_info{}) -> iodata().
 
 set_sql(#request_info{table_info=TableInfo}=ReqInfo) ->
-%    ReturningSql = build_returning_sql(ReqInfo#request_info.table_info),
-%    AsSql = build_as_sql(ReqInfo#request_info.table_info),
     #table_info{returning_sql=ReturningSql,as_sql=AsSql} = TableInfo,
     SetSql = build_set_sql(ReqInfo),
     OverwriteSql = build_overwrite_sql(ReqInfo),
@@ -67,10 +66,16 @@ set_sql(#request_info{table_info=TableInfo}=ReqInfo) ->
 -spec update_sql(ReqInfo::#request_info{}) -> iodata().
 
 update_sql(#request_info{table_info=TableInfo}=ReqInfo) ->
-%    ReturningSql = build_returning_sql(ReqInfo#request_info.table_info),
-%    AsSql = build_as_sql(ReqInfo#request_info.table_info),
     #table_info{returning_sql=ReturningSql,as_sql=AsSql} = TableInfo,
     UpdateSql = build_update_sql(ReqInfo),
     SetSql = build_set_sql(ReqInfo),
     ["SELECT * FROM update_helper($$", UpdateSql, "$$, $$", SetSql, "$$,$$", ReturningSql, "$$) ", AsSql].
+
+-spec select_sql(ReqInfo::#request_info{}) -> iodata().
+
+select_sql(#request_info{table_info=TableInfo, columns=Cols}) ->
+    TableName = TableInfo#table_info.table_name,
+    ["SELECT ", string:join([ binary_to_list(N) || #column{name=N} <- Cols], ", "), 
+     " FROM ", TableName,
+     " WHERE ", string:join([io_lib:format("~s = '~s'::~s", [N, V, T]) || #column{name=N,value=V,type=T,is_pk=true} <- Cols], " AND ")].
 
