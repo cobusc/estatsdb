@@ -4,7 +4,8 @@
          content_types_provided/2, 
          allowed_methods/2, 
          malformed_request/2,
-         resource_exists/2
+         resource_exists/2,
+         forbidden/2
         ]).
 
 -include_lib("webmachine/include/webmachine.hrl").
@@ -20,6 +21,17 @@ content_types_provided(RD, Ctx) ->
 
 allowed_methods(RD, Ctx) ->
     {['GET'], RD, Ctx}.
+
+%%
+%% @doc Check if the request is from an allowed IP address.
+%%
+forbidden(RD, Ctx) ->
+    case application:get_env(estatsdb, readers) of
+        {ok, []} -> 
+            {false, RD, Ctx};
+        {ok, AllowedIps} when is_list(AllowedIps) ->
+            {not lists:member(wrq:peer(RD), AllowedIps), RD, Ctx}
+    end. 
 
 %%
 %% @doc Check if the request parameters are correct and complete

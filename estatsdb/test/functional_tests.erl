@@ -38,6 +38,10 @@ setup_test_() ->
                                            {webmachine_perf_log_handler, ["log"]}
                                           ])),
 
+     ?assertEqual(ok, ensure_loaded(estatsdb)),
+     ?assertEqual(ok, application:set_env(estatsdb, readers, ["127.0.0.1"])),
+     ?assertEqual(ok, application:set_env(estatsdb, writers, [])),
+
      ?assertEqual(ok, estatsdb:start()),
 
      ?assertEqual(ok, timer:sleep(5000)), % @todo
