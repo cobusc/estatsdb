@@ -13,9 +13,11 @@ The application reads the database table definitions of tables in the specified 
 * check the validity of requests and
 * construct SQL queries using explicit type casts from strings (the values passed in the URL) to the known column types in the database.
 
+Access control is currently provided using IP checking, but it is trivial to add password-based authentication.
+
 Requirements
 ------------
-Currently PostgreSQL 9.1 or higher is requiered due to the use of the `format()` function. See: http://www.postgresql.org/docs/9.1/static/functions-string.html . It is only used for convenience and should be trivial to remove in order to support older versions as well.
+PostgreSQL 8.4 or higher. Whilst I initially used functions only available since 9.1, I subsequently removed it for compatibility's sake. The code contains the 9.1 conventions/functions as comments.
 
 Usage
 -----
@@ -34,15 +36,15 @@ CREATE TABLE myapp.daily_stats
 );
 ```
 
-Refresh the _schema\_server_ from the Erlang shell:
-```erlang
-schema_server:refresh().
-```
-or alternatively by calling a URL:
+Refresh the _schema\_server_ by calling a URL (IP access controlled):
 ```
 curl "http://localhost:8000/refresh"
 ```
-Note that the refresh call is only allowed when made from the local host.
+
+or alternatively from the Erlang shell:
+```erlang
+schema_server:refresh().
+```
 
 To *set* values, call:
 ```

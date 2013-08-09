@@ -1,5 +1,6 @@
 -- Since PostgrSQL 9.1 CREATE EXTENSION is prefered over CREATE LANGUAGE
-CREATE EXTENSION IF NOT EXISTS plpgsql;
+-- CREATE EXTENSION IF NOT EXISTS plpgsql;
+CREATE LANGUAGE plpgsql;
 
 --
 -- Helper function to set metric value(s).
@@ -43,11 +44,13 @@ DECLARE
     _Result RECORD;
 BEGIN
     BEGIN
-        EXECUTE format('%s %s', _UpdateStatement, _ReturningStatement)
+--        EXECUTE format('%s %s', _UpdateStatement, _ReturningStatement) -- PG 9.1+
+          EXECUTE _UpdateStatement || ' ' || _ReturningStatement
           INTO STRICT _Result;
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
-            EXECUTE format('%s %s', _InsertStatement, _ReturningStatement)
+--            EXECUTE format('%s %s', _InsertStatement, _ReturningStatement) -- PG 9.1+
+              EXECUTE _InsertStatement || ' ' || _ReturningStatement
                INTO STRICT _Result;
     END;
     RETURN _Result;
