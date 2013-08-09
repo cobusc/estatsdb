@@ -51,10 +51,15 @@ init([]) ->
         AnyPort -> AnyPort
     end,
     WebConfig = [
-                 {ip, Ip},
-                 {port, Port},
-                 {log_dir, "log"},
-                 {dispatch, Dispatch}],
+        {ip, Ip},
+        {port, Port},
+        {log_dir, "log"},
+        {dispatch, Dispatch}
+%       {ssl, [
+%           {certfile, "./etc/cert.pem"},
+%           {keyfile, "./etc/key.pem"}
+%       ]},
+    ],
     SchemaServer = {schema_server,
                     {schema_server, start_link, []},
                     permanent, 5000, worker, [schema_server]},
