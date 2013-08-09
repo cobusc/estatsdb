@@ -15,6 +15,8 @@ The application reads the database table definitions of tables in the specified 
 
 Access control is currently provided using IP checking, but it is trivial to add password-based authentication.
 
+Integration with existing databases is easy, since _estatsdb_ only requires two helper functions to be created. Refer to https://github.com/cobusc/estatsdb/blob/master/estatsdb/src/sql/create_estatsdb_functions.sql for details.
+
 Requirements
 ------------
 PostgreSQL 8.4 or higher. Whilst I initially used functions only available since 9.1, I subsequently removed it for compatibility's sake. The code contains the 9.1 conventions/functions as comments.
