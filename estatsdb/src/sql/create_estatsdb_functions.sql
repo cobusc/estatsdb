@@ -17,11 +17,13 @@ DECLARE
     _Result RECORD;
 BEGIN
     BEGIN
-        EXECUTE format('%s %s', _InsertStatement, _ReturningStatement)
+--        EXECUTE format('%s %s', _InsertStatement, _ReturningStatement) -- PG 9.1+
+        EXECUTE _InsertStatement || ' ' || _ReturningStatement
            INTO STRICT _Result;
     EXCEPTION
         WHEN unique_violation THEN
-            EXECUTE format('%s %s',_UpdateStatement, _ReturningStatement)
+--            EXECUTE format('%s %s',_UpdateStatement, _ReturningStatement) -- PG 9.1+
+            EXECUTE _UpdateStatement || ' ' || _ReturningStatement      
                INTO STRICT _Result;
     END;
     RETURN _Result;
@@ -45,12 +47,12 @@ DECLARE
 BEGIN
     BEGIN
 --        EXECUTE format('%s %s', _UpdateStatement, _ReturningStatement) -- PG 9.1+
-          EXECUTE _UpdateStatement || ' ' || _ReturningStatement
+        EXECUTE _UpdateStatement || ' ' || _ReturningStatement
           INTO STRICT _Result;
     EXCEPTION
         WHEN NO_DATA_FOUND THEN
 --            EXECUTE format('%s %s', _InsertStatement, _ReturningStatement) -- PG 9.1+
-              EXECUTE _InsertStatement || ' ' || _ReturningStatement
+            EXECUTE _InsertStatement || ' ' || _ReturningStatement
                INTO STRICT _Result;
     END;
     RETURN _Result;
