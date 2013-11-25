@@ -1,4 +1,4 @@
-[![Build Status](https://www.travis-ci.org/cobusc/estatsdb.png?branch=master)](https://www.travis-ci.org/cobusc/estatsdb)
+[![Build Status](https://travis-ci.org/cobusc/estatsdb.png?branch=master)](https://www.travis-ci.org/cobusc/estatsdb)
 
 estatsdb
 ========
