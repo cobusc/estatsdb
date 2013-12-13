@@ -18,6 +18,7 @@ ensure_started(App) ->
 start_deps() ->
     ensure_started(sasl),
     ensure_started(inets),
+    ensure_started(asn1),
     ensure_started(crypto),
     ensure_started(mochiweb),
     ensure_started(public_key),
