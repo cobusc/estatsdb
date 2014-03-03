@@ -13,7 +13,7 @@ The application reads the database table definitions of tables in the specified 
 * check the validity of requests and
 * construct SQL queries using explicit type casts from strings (the values passed in the URL) to the known column types in the database.
 
-Access control is currently provided using IP checking, but it is trivial to add password-based authentication.
+Access control is currently provided using IP-address checking, but it is trivial to add password-based authentication.
 
 Integration with existing databases is easy, since _estatsdb_ only requires two helper functions to be created. Refer to https://github.com/cobusc/estatsdb/blob/master/estatsdb/src/sql/create_estatsdb_functions.sql for details.
 
@@ -38,7 +38,7 @@ CREATE TABLE myapp.daily_stats
 );
 ```
 
-Refresh the _schema\_server_ by calling a URL (IP access controlled):
+Refresh the `schema_server` by calling a URL (access control based on the caller's IP-address):
 ```
 curl "http://localhost:8000/refresh"
 ```
